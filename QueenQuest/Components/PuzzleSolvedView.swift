@@ -33,11 +33,14 @@ struct PuzzleSolvedView: View {
 
                 Button("Play again", action: onPlayAgain)
                     .buttonSizing(.fitted)
+                    .accessibilityIdentifier("PlayAgainButton")
             }
             .padding(20)
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(24)
+            .accessibilityElement(children: .contain)
         }
+        .accessibilityIdentifier("PuzzleSolvedView")
     }
 }

@@ -20,14 +20,18 @@ struct BoardControlsView: View {
 
             Picker("Board Size", selection: boardSizeBinding) {
                 ForEach(sizes, id: \.self) { size in
-                    Text("\(size)x\(size)").tag(size)
+                    Text("\(size)x\(size)")
+                        .tag(size)
+                        .accessibilityIdentifier("BoardSizeOption_\(size)")
                 }
             }
             .pickerStyle(.menu)
+            .accessibilityIdentifier("BoardSizePicker")
 
             Spacer()
 
             Button("Restart") { onRestart() }
+                .accessibilityIdentifier("RestartButton")
         }
         .padding(.horizontal)
     }

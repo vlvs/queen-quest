@@ -1,3 +1,8 @@
-# Xcode user data
-**/xcuserdata/
+# Xcode user-specific data
 *.xcuserstate
+**/xcuserdata/
+**/xcdebugger/
+**/xcbaselines/
+
+# Derived Data
+.build/

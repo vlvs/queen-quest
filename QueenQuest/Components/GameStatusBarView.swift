@@ -37,7 +37,10 @@ struct GameStatusBarView: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text("Queens: \(queensCount)/\(boardSize)")
+                    .accessibilityIdentifier("QueensCountLabel")
+
                 Text("Conflicts: \(conflictsCount)")
+                    .accessibilityIdentifier("ConflictsCountLabel")
             }
         }
         .font(.subheadline)

@@ -32,12 +32,12 @@ struct BoardView: View {
                             .frame(width: cellWidth, height: cellWidth)
                             .contentShape(Rectangle())
                             .onTapGesture { onTap(position) }
+                            .accessibilityIdentifier("Cell(\(row), \(column))")
                         }
                     }
                 }
             }
             .frame(width: boardWidth, height: boardWidth)
-            .accessibilityElement(children: .contain)
         }
         .aspectRatio(1, contentMode: .fit)
     }
