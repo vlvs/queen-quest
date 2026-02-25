@@ -7,7 +7,12 @@
 
 import Foundation
 
-final class BestTimesStore {
+protocol BestTimesStore {
+    func bestTime(for boardSize: Int) -> TimeInterval?
+    func updateBestTime(with newTime: TimeInterval, for boardSize: Int) -> Bool
+}
+
+final class BestTimesStoreImpl: BestTimesStore {
     private let defaults: UserDefaults
     private let keyPrefix: String = "bestTimeSeconds_"
 

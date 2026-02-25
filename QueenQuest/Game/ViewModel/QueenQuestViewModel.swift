@@ -10,11 +10,7 @@ import Combine
 
 @MainActor
 final class QueenQuestViewModel: ObservableObject {
-    enum QueenToggleResult {
-        case placed
-        case removed
-        case ignored
-    }
+    enum QueenToggleResult { case placed, removed, ignored }
 
     @Published private(set) var boardSize: Int = 8
     @Published private(set) var queens: Set<Position> = []
@@ -25,13 +21,21 @@ final class QueenQuestViewModel: ObservableObject {
     @Published private(set) var didSetNewBestTime: Bool = false
 
     private(set) var startTime: Date?
-    private let bestTimesStore = BestTimesStore()
+
+    private let clock: Clock
+    private let bestTimesStore: BestTimesStore
     private var solvedCancellable: AnyCancellable?
 
-    init(boardSize: Int = 8) {
+    init(
+        boardSize: Int = 8,
+        makeClock: @MainActor () -> Clock = { SystemClock() },
+        makeBestTimesStore: @MainActor () -> BestTimesStore = { BestTimesStoreImpl() }
+    ) {
         self.boardSize = max(4, boardSize)
-        loadBestSolvingTime()
+        self.clock = makeClock()
+        self.bestTimesStore = makeBestTimesStore()
 
+        loadBestSolvingTime()
         solvedCancellable = $isSolved
             .removeDuplicates()
             .filter { $0 }
@@ -57,7 +61,7 @@ final class QueenQuestViewModel: ObservableObject {
 
     func toggleQueen(at position: Position) -> QueenToggleResult {
         guard isWithinBounds(position) else { return .ignored }
-        if startTime == nil { startTime = Date() }
+        if startTime == nil { startTime = clock.now() }
 
         if queens.contains(position) {
             queens.remove(position)
@@ -80,14 +84,14 @@ final class QueenQuestViewModel: ObservableObject {
         isSolved = (queens.count == boardSize && conflicts.isEmpty)
     }
 
-    private func updateBestSolvingTime() {
-        if let startTime { elapsedTime = Date().timeIntervalSince(startTime) }
-        didSetNewBestTime = bestTimesStore.updateBestTime(with: elapsedTime, for: boardSize)
-        loadBestSolvingTime()
-    }
-
     private func loadBestSolvingTime() {
         bestSolvingTime = bestTimesStore.bestTime(for: boardSize)
+    }
+
+    private func updateBestSolvingTime() {
+        if let startTime { elapsedTime = clock.now().timeIntervalSince(startTime) }
+        didSetNewBestTime = bestTimesStore.updateBestTime(with: elapsedTime, for: boardSize)
+        loadBestSolvingTime()
     }
 
     private func computeConflictingQueens(from queens: Set<Position>) -> Set<Position> {
