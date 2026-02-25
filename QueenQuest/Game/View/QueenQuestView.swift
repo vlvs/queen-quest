@@ -84,4 +84,4 @@ struct QueenQuestView: View {
     }
 }
 
-#Preview { QueenQuestView()}
+#Preview { QueenQuestView() }
