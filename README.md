@@ -1,6 +1,6 @@
 # 𖣯 Queen Quest ✧
 
-Queen Quest is a small SwiftUI game based on the classic [N-Queens problem](https://en.wikipedia.org/wiki/Eight_queens_puzzle). The goal is to place _n_ queens on an _n_ x _n_ chessboard such that no queen threatens another (no same row, column, or diagonal).
+Queen Quest is a small SwiftUI game based on the classic [N-Queens problem](https://en.wikipedia.org/wiki/Eight_queens_puzzle). The goal is to place _n_ queens on an _n_ × _n_ chessboard such that no queen threatens another (no same row, column, or diagonal).
 
 The game provides real-time validation for queen placements and highlights conflicts, tracks the time taken to solve each iteration of the puzzle, saves best times per board size, and celebrates wins with haptics + animations + SFX.  
 
@@ -40,12 +40,12 @@ State flows one way:
 - View model mutates canonical state (`queens`, `boardSize`, `startTime`)
 - View model recomputes derived state (`conflicts`, `isSolved`, `elapsedTime`)
 
-The set `conflicts` set and the `isSolved` flag are derived from `queens`. This keeps the UI declaritive and makes state transitions predictable and testable.
+The `conflicts` set and the `isSolved` flag are derived from `queens`. This keeps the UI declarative and makes state transitions predictable and testable.
 
 ### Injected Dependencies for Reliable Tests
 
-- Persistence is abstracted behind the `BestTimesStore` interface while the concrete implementation resides at `BestTimesStoresImpl` backed by `UserDefaults` (appropriate for a small, non-sensitive, device-local state).
-- Time is abtracted via `Clock` / `SystemClock` so that the view model never calls `Date()` directly, enabling unit tests to assert elapsed time and best time behavior without sleeps or flaky timing.
+- Persistence is abstracted behind the `BestTimesStore` interface while the concrete implementation resides in `BestTimesStoreImpl`, backed by `UserDefaults` (appropriate for a small, non-sensitive, device-local state).
+- Time is abstracted via `Clock` / `SystemClock` so that the view model never calls `Date()` directly, enabling unit tests to assert elapsed time and best time behavior without sleeps or flaky timing.
 
 The protocol boundaries keep the view model decoupled from storage details and enable deterministic unit tests.
 
@@ -55,7 +55,7 @@ The UI is composed from focused components (e.g., `BoardView`, `BoardControlsVie
 
 ### Consciously Managed Complexity
 
-The conflict detection algorithm is a straightforward O(k²) pairwise check, justified by small board sizes (4-10) and clarity. The algorith is easy to reason about and easy to test. Optimization is deferred until a real need emerges.
+The conflict detection algorithm is a straightforward O(n²) pairwise check, justified by small board sizes (4-10) and clarity. The algorithm is easy to reason about and easy to test. Optimization is deferred until a real need emerges.
 
 ### Result
 
