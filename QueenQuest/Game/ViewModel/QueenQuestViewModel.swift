@@ -10,8 +10,6 @@ import Combine
 
 @MainActor
 final class QueenQuestViewModel: ObservableObject {
-    enum QueenToggleResult { case placed, removed, ignored }
-
     @Published private(set) var boardSize: Int = 8
     @Published private(set) var queens: Set<Position> = []
     @Published private(set) var conflicts: Set<Position> = []
@@ -19,27 +17,41 @@ final class QueenQuestViewModel: ObservableObject {
     @Published private(set) var elapsedTime: TimeInterval = 0
     @Published private(set) var bestSolvingTime: TimeInterval? = nil
     @Published private(set) var didSetNewBestTime: Bool = false
+    @Published private(set) var isConfettiActive: Bool = false
 
     private(set) var startTime: Date?
 
     private let clock: Clock
     private let bestTimesStore: BestTimesStore
+    private let feedbackPlayer: GameFeedbackPlayer
+
     private var solvedCancellable: AnyCancellable?
+    private var confettiOffWorkItem: DispatchWorkItem?
+
+    private static let confettiDuration: TimeInterval = 7.0
 
     init(
         boardSize: Int = 8,
         makeClock: @MainActor () -> Clock = { SystemClock() },
-        makeBestTimesStore: @MainActor () -> BestTimesStore = { BestTimesStoreImpl() }
+        makeBestTimesStore: @MainActor () -> BestTimesStore = { BestTimesStoreImpl() },
+        makeFeedbackPlayer: @MainActor () -> GameFeedbackPlayer = {
+            GameFeedbackPlayerImpl(
+                haptics: HapticsPlayerImpl(),
+                sounds: SoundPlayerImpl()
+            )
+        }
     ) {
         self.boardSize = max(4, boardSize)
         self.clock = makeClock()
         self.bestTimesStore = makeBestTimesStore()
+        self.feedbackPlayer = makeFeedbackPlayer()
 
         loadBestSolvingTime()
+
         solvedCancellable = $isSolved
             .removeDuplicates()
             .filter { $0 }
-            .sink { [weak self] _ in self?.updateBestSolvingTime() }
+            .sink { [weak self] _ in self?.handleSolvedPuzzle() }
     }
 
     func setBoardSize(_ n: Int) {
@@ -59,19 +71,19 @@ final class QueenQuestViewModel: ObservableObject {
         loadBestSolvingTime()
     }
 
-    func toggleQueen(at position: Position) -> QueenToggleResult {
-        guard isWithinBounds(position) else { return .ignored }
+    func toggleQueen(at position: Position) {
+        guard isWithinBounds(position) else { return }
         if startTime == nil { startTime = clock.now() }
 
         if queens.contains(position) {
             queens.remove(position)
             refreshBoardState()
-            return .removed
+            feedbackPlayer.queenRemoved()
         } else {
-            guard queens.count < boardSize else { return .ignored }
+            guard queens.count < boardSize else { return }
             queens.insert(position)
             refreshBoardState()
-            return .placed
+            feedbackPlayer.queenPlaced()
         }
     }
 
@@ -88,10 +100,31 @@ final class QueenQuestViewModel: ObservableObject {
         bestSolvingTime = bestTimesStore.bestTime(for: boardSize)
     }
 
-    private func updateBestSolvingTime() {
+    private func handleSolvedPuzzle() {
         if let startTime { elapsedTime = clock.now().timeIntervalSince(startTime) }
         didSetNewBestTime = bestTimesStore.updateBestTime(with: elapsedTime, for: boardSize)
         loadBestSolvingTime()
+
+        feedbackPlayer.puzzleSolved()
+        triggerConfetti(for: Self.confettiDuration)
+    }
+
+    private func triggerConfetti(for duration: TimeInterval) {
+        confettiOffWorkItem?.cancel()
+        confettiOffWorkItem = nil
+        isConfettiActive = false
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.isConfettiActive = true
+
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.isConfettiActive = false
+            }
+
+            confettiOffWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
+        }
     }
 
     private func computeConflictingQueens(from queens: Set<Position>) -> Set<Position> {
