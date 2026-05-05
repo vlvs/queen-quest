@@ -9,7 +9,16 @@ import SwiftUI
 import UIKit
 
 struct ConfettiCelebrationView: UIViewRepresentable {
-    let isActive: Bool
+    private static let emissionStopDelay: Duration = .seconds(1)
+    private let isActive: Bool
+
+    init(isActive: Bool) {
+        self.isActive = isActive
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
@@ -18,6 +27,9 @@ struct ConfettiCelebrationView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.stopEmitterTask?.cancel()
+        context.coordinator.stopEmitterTask = nil
+
         uiView.layer.sublayers?.removeAll(where: { $0.name == "confetti" })
         guard isActive else { return }
 
@@ -47,9 +59,18 @@ struct ConfettiCelebrationView: UIViewRepresentable {
 
         uiView.layer.addSublayer(emitter)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        context.coordinator.stopEmitterTask = Task { @MainActor in
+            try? await Task.sleep(for: Self.emissionStopDelay)
+            guard !Task.isCancelled else { return }
             emitter.birthRate = 0
+            context.coordinator.stopEmitterTask = nil
         }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.stopEmitterTask?.cancel()
+        coordinator.stopEmitterTask = nil
+        uiView.layer.sublayers?.removeAll(where: { $0.name == "confetti" })
     }
 
     private func particleImage(color: UIColor) -> UIImage {
@@ -59,5 +80,9 @@ struct ConfettiCelebrationView: UIViewRepresentable {
             color.setFill()
             context.cgContext.fill(CGRect(origin: .zero, size: size))
         }
+    }
+
+    final class Coordinator {
+        var stopEmitterTask: Task<Void, Never>?
     }
 }

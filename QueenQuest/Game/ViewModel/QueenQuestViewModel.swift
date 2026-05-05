@@ -26,9 +26,9 @@ final class QueenQuestViewModel: ObservableObject {
     private let feedbackPlayer: GameFeedbackPlayer
 
     private var solvedCancellable: AnyCancellable?
-    private var confettiOffWorkItem: DispatchWorkItem?
+    private var confettiTask: Task<Void, Never>?
 
-    private static let confettiDuration: TimeInterval = 7.0
+    private static let confettiDuration: Duration = .seconds(7)
 
     init(
         boardSize: Int = 8,
@@ -54,6 +54,10 @@ final class QueenQuestViewModel: ObservableObject {
             .sink { [weak self] _ in self?.handleSolvedPuzzle() }
     }
 
+    deinit {
+        confettiTask?.cancel()
+    }
+
     func setBoardSize(_ n: Int) {
         let newSize = max(4, n)
         guard newSize != boardSize else { return }
@@ -62,12 +66,16 @@ final class QueenQuestViewModel: ObservableObject {
     }
 
     func resetBoardState() {
+        confettiTask?.cancel()
+        confettiTask = nil
         queens.removeAll()
         conflicts.removeAll()
         isSolved = false
         elapsedTime = 0
         startTime = nil
         didSetNewBestTime = false
+        isConfettiActive = false
+
         loadBestSolvingTime()
     }
 
@@ -109,21 +117,15 @@ final class QueenQuestViewModel: ObservableObject {
         triggerConfetti(for: Self.confettiDuration)
     }
 
-    private func triggerConfetti(for duration: TimeInterval) {
-        confettiOffWorkItem?.cancel()
-        confettiOffWorkItem = nil
-        isConfettiActive = false
+    private func triggerConfetti(for duration: Duration) {
+        confettiTask?.cancel()
+        isConfettiActive = true
 
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.isConfettiActive = true
-
-            let workItem = DispatchWorkItem { [weak self] in
-                self?.isConfettiActive = false
-            }
-
-            confettiOffWorkItem = workItem
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
+        confettiTask = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled else { return }
+            self?.isConfettiActive = false
+            self?.confettiTask = nil
         }
     }
 
